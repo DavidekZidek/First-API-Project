@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recepty podle surovin</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div>
+        <h1>Vyhledávání receptů podle surovin</h1>
+        <div>
+            <label for="ingredients">Zadej suroviny (oddělené čárkou):</label>
+            <textarea id="ingredients"></textarea>
+        </div>
+        <div>
+            <button onclick="searchRecipe()">Vyhledat recept</button>
+            <button onclick="searchNextRecipe()">Další recept</button>
+        </div>
+    </div>
+    <div id="recipeResult"></div>
+
+    <script>
+        let currentIngredients = [];
+        let currentRecipes = [];
+        let currentIndex = 0;
+
+        async function getRecipeById(recipeId) {
+            const options = {
+                method: 'GET',
+                url: `https://spoonacular-recipe-food-nutrition-v1.p.rapidapi.com/recipes/${recipeId}/information`,
+                headers: {
+                    'X-RapidAPI-Key': 'aaa65c4947mshfa041b9598fbf2dp1cce75jsn1fd832a7aa00',
+                    'X-RapidAPI-Host': 'spoonacular-recipe-food-nutrition-v1.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await axios.request(options);
+                return response.data;
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
+        async function getRecipeNutrition(recipeId) {
+            const url = `https://spoonacular-recipe-food-nutrition-v1.p.rapidapi.com/recipes/${recipeId}/nutritionWidget.json`;
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': 'aaa65c4947mshfa041b9598fbf2dp1cce75jsn1fd832a7aa00',
+                    'X-RapidAPI-Host': 'spoonacular-recipe-food-nutrition-v1.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
+        async function getRecipeByIngredients(ingredients) {
+            const options = {
+                method: 'GET',
+                url: 'https://spoonacular-recipe-food-nutrition-v1.p.rapidapi.com/recipes/findByIngredients',
+                params: {
+                    ingredients: ingredients.join(','),
+                    number: '100',
+                    ignorePantry: 'true',
+                    ranking: '1'
+                },
+                headers: {
+                    'X-RapidAPI-Key': 'aaa65c4947mshfa041b9598fbf2dp1cce75jsn1fd832a7aa00',
+                    'X-RapidAPI-Host': 'spoonacular-recipe-food-nutrition-v1.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await axios.request(options);
+                return response.data;
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
+        async function searchRecipe() {
+            const ingredientsInput = document.getElementById('ingredients').value.trim();
+            if (!ingredientsInput) {
+                alert('Prosím, zadej suroviny.');
+                return;
+            }
+
+            const ingredients = ingredientsInput.split(',').map(ingredient => ingredient.trim());
+            currentIngredients = ingredients;
+            currentIndex = 0;
+
+            await displayRecipe();
+        }
+
+        async function searchNextRecipe() {
+            if (!currentRecipes || currentRecipes.length === 0) {
+                alert('Nejprve proveďte vyhledání receptu.');
+                return;
+            }
+
+            currentIndex++;
+            if (currentIndex >= currentRecipes.length) {
+                currentIndex = 0;
+            }
+
+            await displayRecipe();
+        }
+
+        async function displayRecipe() {
+            const recipeResultDiv = document.getElementById('recipeResult');
+            recipeResultDiv.innerHTML = 'Hledám recept...';
+
+            if (currentRecipes.length === 0) {
+                currentRecipes = await getRecipeByIngredients(currentIngredients);
+            }
+
+            if (currentRecipes && currentRecipes.length > 0) {
+                const recipe = currentRecipes[currentIndex];
+                const detailedRecipe = await getRecipeById(recipe.id);
+                if (detailedRecipe) {
+                    const ingredientsList = detailedRecipe.extendedIngredients.map(ingredient => ingredient.original);
+                    const nutrition = await getRecipeNutrition(recipe.id);
+
+                    // Kontrola, zda jsou k dispozici nutriční údaje
+                    if (nutrition) {
+                        let recipeHTML = `<h2>Recept: ${detailedRecipe.title}</h2>
+                            <img src="${detailedRecipe.image}" alt="Obrázek receptu">
+                            <p>${detailedRecipe.instructions}</p>
+                            <ul>${ingredientsList.map(ingredient => `<li>${ingredient}</li>`).join('')}</ul>`;
+                        
+                        // Výpis nutričních hodnot
+                        recipeHTML += `<h3>Nutriční hodnoty na porci:</h3>
+                            <table>
+                                ${nutrition.nutrients.map(nutrient => `
+                                    <tr>
+                                        <td>${nutrient.name}</td>
+                                        <td>${nutrient.amount} ${nutrient.unit}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>`;
+                        
+                        recipeResultDiv.innerHTML = recipeHTML;
+                    } else {
+                        recipeResultDiv.innerHTML = 'Nepodařilo se načíst nutriční hodnoty receptu.';
+                    }
+                } else {
+                    recipeResultDiv.innerHTML = 'Nepodařilo se načíst detaily receptu.';
+                }
+            } else {
+                recipeResultDiv.innerHTML = 'Nenalezen žádný recept pro zadané suroviny.';
+            }
+        }
+    </script>
+</body>
+</html>

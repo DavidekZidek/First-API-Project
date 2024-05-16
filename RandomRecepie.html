@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Recipe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #recipeContainer {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Random Recipe</h1>
+    <button id="getRandomRecipeBtn">Get Random Recipe</button>
+    <div id="recipeContainer"></div>
+
+    <script>
+        document.getElementById('getRandomRecipeBtn').addEventListener('click', async function() {
+            const url = 'https://spoonacular-recipe-food-nutrition-v1.p.rapidapi.com/recipes/random?tags=vegetarian%2Cdessert&number=1';
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': 'aaa65c4947mshfa041b9598fbf2dp1cce75jsn1fd832a7aa00',
+                    'X-RapidAPI-Host': 'spoonacular-recipe-food-nutrition-v1.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                displayRecipe(data.recipes[0]);
+            } catch (error) {
+                console.error('Chyba při získávání receptu:', error);
+            }
+        });
+
+        function displayRecipe(recipe) {
+            const recipeContainer = document.getElementById('recipeContainer');
+            recipeContainer.innerHTML = ''; // Vymažeme předchozí obsah
+
+            const titleElement = document.createElement('h2');
+            titleElement.textContent = recipe.title;
+
+            const imageElement = document.createElement('img');
+            imageElement.src = recipe.image;
+            imageElement.alt = recipe.title;
+
+            const summaryElement = document.createElement('p');
+            summaryElement.innerHTML = recipe.summary;
+
+            recipeContainer.appendChild(titleElement);
+            recipeContainer.appendChild(imageElement);
+            recipeContainer.appendChild(summaryElement);
+        }
+    </script>
+</body>
+</html>
